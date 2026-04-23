@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoViz Pro — Algorithm Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0e1520;
+    --surface2: #141d2e;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --green: #00ff9d;
+    --yellow: #ffd60a;
+    --red: #ff3a5c;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --bar-default: #1e3a5f;
+    --bar-active: #00d4ff;
+    --bar-compare: #ff6b35;
+    --bar-sorted: #00ff9d;
+    --bar-pivot: #ffd60a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.12;
+  }
+  .orb1 { width: 600px; height: 600px; background: var(--accent3); top: -200px; left: -100px; }
+  .orb2 { width: 400px; height: 400px; background: var(--accent); bottom: 100px; right: -100px; }
+
+  /* HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,12,16,0.8);
+    backdrop-filter: blur(20px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: 14px;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  .logo-text {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .header-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(0,212,255,0.05);
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { border-color: rgba(0,212,255,0.3); box-shadow: 0 0 0 rgba(0,212,255,0); }
+    50% { border-color: rgba(0,212,255,0.6); box-shadow: 0 0 10px rgba(0,212,255,0.2); }
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    height: calc(100vh - 65px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: rgba(14,21,32,0.6);
+    backdrop-filter: blur(10px);
+    overflow-y: auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Algorithm selector */
+  .algo-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .algo-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .algo-btn:hover {
+    background: var(--surface2);
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .algo-btn.active {
+    background: rgba(0,212,255,0.08);
+    color: var(--accent);
+    border-color: rgba(0,212,255,0.3);
+  }
+
+  .algo-btn .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .algo-btn.active .dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+  .complexity-badge {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--surface);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .algo-btn.active .complexity-badge {
+    color: var(--accent);
+    background: rgba(0,212,255,0.1);
+  }
+
+  /* Controls */
+  .control-group { display: flex; flex-direction: column; gap: 14px; }
+
+  .slider-wrap { display: flex; flex-direction: column; gap: 8px; }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .slider-label span {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 11px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,212,255,0.4);
+  }
+
+  /* Action buttons */
+  .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn {
+    flex: 1;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    min-width: 70px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0,212,255,0.2);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0,212,255,0.3);
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--border);
+    border-color: var(--muted);
+  }
+
+  .btn-danger {
+    background: rgba(255,58,92,0.1);
+    color: var(--red);
+    border: 1px solid rgba(255,58,92,0.2);
+  }
+
+  .btn-danger:hover {
+    background: rgba(255,58,92,0.2);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  /* Custom array input */
+  .custom-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .custom-input:focus {
+    border-color: rgba(0,212,255,0.4);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+  }
+
+  /* Legend */
+  .legend { display: flex; flex-direction: column; gap: 8px; }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* MAIN CONTENT */
+  .content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Algorithm info bar */
+  .algo-info {
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: rgba(14,21,32,0.4);
+  }
+
+  .algo-name {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .info-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .info-pill strong { color: var(--accent); }
+
+  /* Stats bar */
+  .stats-bar {
+    padding: 12px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 32px;
+    background: rgba(8,12,16,0.3);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  /* Visualizer area */
+  .visualizer {
+    flex: 1;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: hidden;
+  }
+
+  .bars-container {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    padding: 20px 0 0;
+    position: relative;
+    min-height: 200px;
+  }
+
+  .bar-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    height: 100%;
+  }
+
+  .bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    background: var(--bar-default);
+    transition: height 0.1s ease, background 0.15s ease;
+    position: relative;
+    min-height: 4px;
+  }
+
+  .bar.active {
+    background: var(--bar-active);
+    box-shadow: 0 0 12px rgba(0,212,255,0.5);
+  }
+
+  .bar.compare {
+    background: var(--bar-compare);
+    box-shadow: 0 0 12px rgba(255,107,53,0.5);
+  }
+
+  .bar.sorted {
+    background: var(--bar-sorted);
+    box-shadow: 0 0 8px rgba(0,255,157,0.3);
+  }
+
+  .bar.pivot {
+    background: var(--bar-pivot);
+    box-shadow: 0 0 12px rgba(255,214,10,0.5);
+  }
+
+  .bar-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* Step description */
+  .step-desc {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .step-desc::before {
+    content: '//';
+    color: var(--accent);
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  /* Status */
+  .status-done {
+    background: rgba(0,255,157,0.05);
+    border-color: var(--green);
+    border-left-color: var(--green);
+    color: var(--green);
+  }
+
+  .status-done::before { color: var(--green); }
+
+  /* Pseudo code panel */
+  .pseudo-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 16px;
+  }
+
+  .pseudo-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .dot-red { width: 10px; height: 10px; background: #ff3a5c; border-radius: 50%; }
+  .dot-yellow { width: 10px; height: 10px; background: #ffd60a; border-radius: 50%; }
+  .dot-green { width: 10px; height: 10px; background: #00ff9d; border-radius: 50%; }
+
+  .pseudo-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .pseudo-code {
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--muted);
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .pseudo-code .kw { color: #7c3aed; }
+  .pseudo-code .fn { color: #00d4ff; }
+  .pseudo-code .num { color: #ff6b35; }
+  .pseudo-code .cm { color: #3d5470; }
+  .pseudo-code .hl { background: rgba(0,212,255,0.08); display: block; border-left: 2px solid var(--accent); padding-left: 8px; margin-left: -8px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    header { padding: 16px 20px; }
+  }
+
+  /* Animations */
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .content { animation: slideUp 0.4s ease; }
+
+  /* Speed indicator */
+  .speed-display {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .speed-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+
+  .speed-dot.on { background: var(--accent); }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">AV</div>
+    <div class="logo-text">Algo<span>Viz</span> Pro</div>
+  </div>
+  <div class="header-badge">v2.1 — Interactive</div>
+</header>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Algorithm Selection -->
+    <div>
+      <div class="section-title">Sorting Algorithms</div>
+      <div class="algo-group" id="algoGroup">
+        <button class="algo-btn active" data-algo="bubble" onclick="selectAlgo('bubble', this)">
+          <span class="dot"></span> Bubble Sort
+          <span class="complexity-badge">O(n²)</span>
+        </button>
+        <button class="algo-btn" data-algo="selection" onclick="selectAlgo('selection', this)">
+          <span class="dot"></span> Selection Sort
+          <span class="complexity-badge">O(n²)</span>
+        </button>
+        <button class="algo-btn" data-algo="insertion" onclick="selectAlgo('insertion', this)">
+          <span class="dot"></span> Insertion Sort
+          <span class="complexity-badge">O(n²)</span>
+        </button>
+        <button class="algo-btn" data-algo="merge" onclick="selectAlgo('merge', this)">
+          <span class="dot"></span> Merge Sort
+          <span class="complexity-badge">O(n log n)</span>
+        </button>
+        <button class="algo-btn" data-algo="quick" onclick="selectAlgo('quick', this)">
+          <span class="dot"></span> Quick Sort
+          <span class="complexity-badge">O(n log n)</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Controls -->
+    <div class="control-group">
+      <div class="section-title">Controls</div>
+
+      <div class="slider-wrap">
+        <div class="slider-label">
+          Array Size <span id="sizeVal">30</span>
+        </div>
+        <input type="range" min="5" max="80" value="30" id="sizeSlider" oninput="updateSize(this.value)">
+      </div>
+
+      <div class="slider-wrap">
+        <div class="slider-label">
+          Speed
+          <div class="speed-display">
+            <div class="speed-dot on" id="sp1"></div>
+            <div class="speed-dot on" id="sp2"></div>
+            <div class="speed-dot" id="sp3"></div>
+            <div class="speed-dot" id="sp4"></div>
+            <div class="speed-dot" id="sp5"></div>
+          </div>
+        </div>
+        <input type="range" min="1" max="5" value="2" id="speedSlider" oninput="updateSpeed(this.value)">
+      </div>
+    </div>
+
+    <!-- Custom Input -->
+    <div>
+      <div class="section-title">Custom Array</div>
+      <input type="text" class="custom-input" id="customInput" placeholder="5, 3, 8, 1, 9, 2...">
+      <br><br>
+      <button class="btn btn-secondary" style="width:100%;font-size:12px;" onclick="applyCustom()">Apply Custom Array</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Action Buttons -->
+    <div>
+      <div class="section-title">Actions</div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="startBtn" onclick="startSort()">▶ Start</button>
+        <button class="btn btn-secondary" id="pauseBtn" onclick="togglePause()" disabled>⏸ Pause</button>
+      </div>
+      <br>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="generateArray()">⟳ New Array</button>
+        <button class="btn btn-danger" id="resetBtn" onclick="resetSort()">■ Reset</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Legend -->
+    <div>
+      <div class="section-title">Legend</div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background:#1e3a5f"></div>
+          Unsorted
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background:#00d4ff; box-shadow: 0 0 8px rgba(0,212,255,0.5)"></div>
+          Active / Comparing
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background:#ff6b35; box-shadow: 0 0 8px rgba(255,107,53,0.5)"></div>
+          Swapping
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background:#ffd60a; box-shadow: 0 0 8px rgba(255,214,10,0.5)"></div>
+          Pivot
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background:#00ff9d; box-shadow: 0 0 8px rgba(0,255,157,0.4)"></div>
+          Sorted ✓
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="content">
+
+    <!-- Algo Info -->
+    <div class="algo-info">
+      <div class="algo-name" id="algoTitle">Bubble Sort</div>
+      <div class="info-pill">Best: <strong id="bestCase">O(n)</strong></div>
+      <div class="info-pill">Avg: <strong id="avgCase">O(n²)</strong></div>
+      <div class="info-pill">Worst: <strong id="worstCase">O(n²)</strong></div>
+      <div class="info-pill">Space: <strong id="spaceCase">O(1)</strong></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-label">Comparisons</div>
+        <div class="stat-value" id="comparisons">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Swaps</div>
+        <div class="stat-value" id="swaps">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Array Size</div>
+        <div class="stat-value" id="arraySize">30</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Time Elapsed</div>
+        <div class="stat-value" id="timeElapsed">0.0s</div>
+      </div>
+    </div>
+
+    <!-- Visualizer -->
+    <div class="visualizer">
+      <div class="bars-container" id="barsContainer"></div>
+
+      <div class="step-desc" id="stepDesc">
+        Select an algorithm and press Start to begin visualization.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================
+// STATE
+// ============================
+let array = [];
+let arraySize = 30;
+let speed = 2; // 1=slow, 5=fast
+let isSorting = false;
+let isPaused = false;
+let stopFlag = false;
+let comparisons = 0;
+let swaps = 0;
+let startTime = null;
+let timerInterval = null;
+let currentAlgo = 'bubble';
+
+const speedMap = { 1: 600, 2: 200, 3: 80, 4: 20, 5: 2 };
+
+const algoData = {
+  bubble: { name: 'Bubble Sort', best: 'O(n)', avg: 'O(n²)', worst: 'O(n²)', space: 'O(1)' },
+  selection: { name: 'Selection Sort', best: 'O(n²)', avg: 'O(n²)', worst: 'O(n²)', space: 'O(1)' },
+  insertion: { name: 'Insertion Sort', best: 'O(n)', avg: 'O(n²)', worst: 'O(n²)', space: 'O(1)' },
+  merge: { name: 'Merge Sort', best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n log n)', space: 'O(n)' },
+  quick: { name: 'Quick Sort', best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n²)', space: 'O(log n)' }
+};
+
+// ============================
+// INIT
+// ============================
+function init() {
+  generateArray();
+}
+
+function generateArray() {
+  if (isSorting) return;
+  array = Array.from({ length: arraySize }, () => Math.floor(Math.random() * 90) + 10);
+  resetStats();
+  renderBars(array, [], [], [], []);
+  setDesc('Array generated. Press ▶ Start to visualize.');
+  getDesc().className = 'step-desc';
+}
+
+function applyCustom() {
+  if (isSorting) return;
+  const input = document.getElementById('customInput').value;
+  const parsed = input.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
+  if (parsed.length < 2) { alert('Enter at least 2 valid numbers, separated by commas.'); return; }
+  array = parsed.slice(0, 80);
+  arraySize = array.length;
+  document.getElementById('sizeVal').textContent = arraySize;
+  document.getElementById('arraySize').textContent = arraySize;
+  resetStats();
+  renderBars(array, [], [], [], []);
+  setDesc(`Custom array of ${array.length} elements loaded. Press ▶ Start!`);
+}
+
+function selectAlgo(algo, btn) {
+  if (isSorting) return;
+  currentAlgo = algo;
+  document.querySelectorAll('.algo-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const d = algoData[algo];
+  document.getElementById('algoTitle').textContent = d.name;
+  document.getElementById('bestCase').textContent = d.best;
+  document.getElementById('avgCase').textContent = d.avg;
+  document.getElementById('worstCase').textContent = d.worst;
+  document.getElementById('spaceCase').textContent = d.space;
+  resetStats();
+  renderBars(array, [], [], [], []);
+  setDesc(`${d.name} selected. Press ▶ Start to begin.`);
+  getDesc().className = 'step-desc';
+}
+
+// ============================
+// RENDER
+// ============================
+function renderBars(arr, active=[], compare=[], sorted=[], pivot=[]) {
+  const container = document.getElementById('barsContainer');
+  const showLabels = arr.length <= 30;
+  container.innerHTML = '';
+  const maxVal = Math.max(...arr);
+
+  arr.forEach((val, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bar-wrapper';
+
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = `${(val / maxVal) * 85}%`;
+
+    if (sorted.includes(i)) bar.classList.add('sorted');
+    else if (pivot.includes(i)) bar.classList.add('pivot');
+    else if (compare.includes(i)) bar.classList.add('compare');
+    else if (active.includes(i)) bar.classList.add('active');
+
+    wrapper.appendChild(bar);
+
+    if (showLabels) {
+      const label = document.createElement('div');
+      label.className = 'bar-val';
+      label.textContent = val;
+      wrapper.appendChild(label);
+    }
+
+    container.appendChild(wrapper);
+  });
+}
+
+// ============================
+// STATS & UI
+// ============================
+function resetStats() {
+  comparisons = 0; swaps = 0;
+  document.getElementById('comparisons').textContent = '0';
+  document.getElementById('swaps').textContent = '0';
+  document.getElementById('timeElapsed').textContent = '0.0s';
+  document.getElementById('arraySize').textContent = array.length;
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+function updateComparisons() { document.getElementById('comparisons').textContent = comparisons; }
+function updateSwaps() { document.getElementById('swaps').textContent = swaps; }
+
+function startTimer() {
+  startTime = Date.now();
+  timerInterval = setInterval(() => {
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    document.getElementById('timeElapsed').textContent = elapsed + 's';
+  }, 100);
+}
+
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+function setDesc(txt) { document.getElementById('stepDesc').textContent = txt; }
+function getDesc() { return document.getElementById('stepDesc'); }
+
+function updateSize(v) {
+  arraySize = parseInt(v);
+  document.getElementById('sizeVal').textContent = v;
+  if (!isSorting) generateArray();
+}
+
+function updateSpeed(v) {
+  speed = parseInt(v);
+  const dots = [1,2,3,4,5];
+  dots.forEach(d => {
+    document.getElementById('sp'+d).classList.toggle('on', d <= speed);
+  });
+}
+
+function setSortingUI(sorting) {
+  isSorting = sorting;
+  document.getElementById('startBtn').disabled = sorting;
+  document.getElementById('pauseBtn').disabled = !sorting;
+  document.getElementById('sizeSlider').disabled = sorting;
+  document.querySelectorAll('.algo-btn').forEach(b => b.disabled = sorting);
+}
+
+// ============================
+// SORT CONTROL
+// ============================
+async function startSort() {
+  if (isSorting) return;
+  stopFlag = false;
+  isPaused = false;
+  resetStats();
+  setSortingUI(true);
+  startTimer();
+
+  const algos = { bubble: bubbleSort, selection: selectionSort, insertion: insertionSort, merge: mergeSort, quick: quickSort };
+  await algos[currentAlgo]();
+
+  if (!stopFlag) {
+    renderBars(array, [], [], Array.from({length: array.length}, (_,i)=>i), []);
+    setDesc('✓ Sorting complete! Array is fully sorted.');
+    getDesc().className = 'step-desc status-done';
+  }
+  stopTimer();
+  setSortingUI(false);
+  document.getElementById('pauseBtn').disabled = true;
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  document.getElementById('pauseBtn').textContent = isPaused ? '▶ Resume' : '⏸ Pause';
+}
+
+function resetSort() {
+  stopFlag = true;
+  isPaused = false;
+  isSorting = false;
+  stopTimer();
+  document.getElementById('pauseBtn').disabled = true;
+  document.getElementById('pauseBtn').textContent = '⏸ Pause';
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('sizeSlider').disabled = false;
+  document.querySelectorAll('.algo-btn').forEach(b => b.disabled = false);
+  generateArray();
+}
+
+function delay() {
+  return new Promise(resolve => {
+    const check = () => {
+      if (stopFlag) { resolve(); return; }
+      if (!isPaused) { setTimeout(resolve, speedMap[speed]); }
+      else { setTimeout(check, 100); }
+    };
+    check();
+  });
+}
+
+// ============================
+// ALGORITHMS
+// ============================
+
+// Bubble Sort
+async function bubbleSort() {
+  const arr = [...array];
+  const n = arr.length;
+  const sorted = [];
+
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      if (stopFlag) return;
+      comparisons++; updateComparisons();
+      setDesc(`Comparing arr[${j}]=${arr[j]} and arr[${j+1}]=${arr[j+1]}`);
+      renderBars(arr, [j], [j+1], sorted, []);
+      await delay();
+
+      if (arr[j] > arr[j+1]) {
+        swaps++; updateSwaps();
+        setDesc(`Swapping ${arr[j]} and ${arr[j+1]} — larger element bubbles up!`);
+        [arr[j], arr[j+1]] = [arr[j+1], arr[j]];
+        array = [...arr];
+        renderBars(arr, [j+1], [j], sorted, []);
+        await delay();
+      }
+    }
+    sorted.push(n - 1 - i);
+    renderBars(arr, [], [], sorted, []);
+  }
+  sorted.push(0);
+  array = [...arr];
+}
+
+// Selection Sort
+async function selectionSort() {
+  const arr = [...array];
+  const n = arr.length;
+  const sorted = [];
+
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+    setDesc(`Finding minimum element in unsorted portion starting at index ${i}`);
+    for (let j = i + 1; j < n; j++) {
+      if (stopFlag) return;
+      comparisons++; updateComparisons();
+      renderBars(arr, [minIdx], [j], sorted, [i]);
+      setDesc(`Checking: arr[${j}]=${arr[j]} vs current min arr[${minIdx}]=${arr[minIdx]}`);
+      await delay();
+      if (arr[j] < arr[minIdx]) { minIdx = j; }
+    }
+    if (minIdx !== i) {
+      swaps++; updateSwaps();
+      setDesc(`Swapping minimum ${arr[minIdx]} with position ${i}`);
+      [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+      array = [...arr];
+    }
+    sorted.push(i);
+    renderBars(arr, [], [], sorted, []);
+    await delay();
+  }
+  sorted.push(n-1);
+  array = [...arr];
+}
+
+// Insertion Sort
+async function insertionSort() {
+  const arr = [...array];
+  const n = arr.length;
+  const sorted = [0];
+
+  for (let i = 1; i < n; i++) {
+    if (stopFlag) return;
+    const key = arr[i];
+    let j = i - 1;
+    setDesc(`Inserting ${key} into sorted portion`);
+    renderBars(arr, [i], [], sorted, []);
+    await delay();
+
+    while (j >= 0 && arr[j] > key) {
+      if (stopFlag) return;
+      comparisons++; swaps++; updateComparisons(); updateSwaps();
+      arr[j + 1] = arr[j];
+      array = [...arr];
+      setDesc(`Shifting ${arr[j]} right to make room for ${key}`);
+      renderBars(arr, [j], [j+1], sorted, [i]);
+      await delay();
+      j--;
+    }
+    arr[j + 1] = key;
+    sorted.push(i);
+    array = [...arr];
+    renderBars(arr, [j+1], [], sorted, []);
+    await delay();
+  }
+  array = [...arr];
+}
+
+// Merge Sort
+async function mergeSort() {
+  const arr = [...array];
+  await mergeSortHelper(arr, 0, arr.length - 1);
+  array = [...arr];
+}
+
+async function mergeSortHelper(arr, l, r) {
+  if (stopFlag || l >= r) return;
+  const mid = Math.floor((l + r) / 2);
+  setDesc(`Dividing: [${l}...${mid}] and [${mid+1}...${r}]`);
+  renderBars(arr, Array.from({length: mid-l+1},(_,i)=>l+i), Array.from({length: r-mid},(_,i)=>mid+1+i), [], []);
+  await delay();
+  await mergeSortHelper(arr, l, mid);
+  await mergeSortHelper(arr, mid + 1, r);
+  await merge(arr, l, mid, r);
+}
+
+async function merge(arr, l, mid, r) {
+  const left = arr.slice(l, mid + 1);
+  const right = arr.slice(mid + 1, r + 1);
+  let i = 0, j = 0, k = l;
+
+  while (i < left.length && j < right.length) {
+    if (stopFlag) return;
+    comparisons++; updateComparisons();
+    setDesc(`Merging: comparing ${left[i]} and ${right[j]}`);
+    renderBars(arr, [k], [mid+1+j], [], []);
+    await delay();
+
+    if (left[i] <= right[j]) { arr[k++] = left[i++]; }
+    else { arr[k++] = right[j++]; swaps++; updateSwaps(); }
+    array = [...arr];
+  }
+
+  while (i < left.length) { arr[k++] = left[i++]; array = [...arr]; }
+  while (j < right.length) { arr[k++] = right[j++]; array = [...arr]; }
+
+  const sortedRange = Array.from({length: r-l+1}, (_, i) => l+i);
+  renderBars(arr, [], [], sortedRange, []);
+  await delay();
+}
+
+// Quick Sort
+async function quickSort() {
+  const arr = [...array];
+  await quickSortHelper(arr, 0, arr.length - 1);
+  array = [...arr];
+}
+
+async function quickSortHelper(arr, low, high) {
+  if (stopFlag || low >= high) return;
+  const pi = await partition(arr, low, high);
+  await quickSortHelper(arr, low, pi - 1);
+  await quickSortHelper(arr, pi + 1, high);
+}
+
+async function partition(arr, low, high) {
+  const pivot = arr[high];
+  let i = low - 1;
+  setDesc(`Pivot = ${pivot} at index ${high}. Partitioning [${low}...${high}]`);
+
+  for (let j = low; j < high; j++) {
+    if (stopFlag) return i + 1;
+    comparisons++; updateComparisons();
+    renderBars(arr, [i+1], [j], [], [high]);
+    setDesc(`Comparing arr[${j}]=${arr[j]} with pivot=${pivot}`);
+    await delay();
+
+    if (arr[j] < pivot) {
+      i++;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      swaps++; updateSwaps();
+      array = [...arr];
+      setDesc(`${arr[j]} < pivot(${pivot}), swapping positions ${i} and ${j}`);
+      renderBars(arr, [i], [j], [], [high]);
+      await delay();
+    }
+  }
+
+  [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+  swaps++; updateSwaps();
+  array = [...arr];
+  setDesc(`Placing pivot ${pivot} at its final position ${i+1}`);
+  renderBars(arr, [], [], [i+1], []);
+  await delay();
+  return i + 1;
+}
+
+// ============================
+// START
+// ============================
+init();
+</script>
+</body>
+</html>
